@@ -1,10 +1,13 @@
---------------
+---
 kind: pipeline
-type: docker
+type: exec
 name: default
 
+platform:
+  os: linux
+  arch: amd64
+
 steps:
-- name: test
-  image: golang:1.12
+- name: greeting
   commands:
-  - go test
+  - echo hello world
