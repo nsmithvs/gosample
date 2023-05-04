@@ -1,8 +1,9 @@
 kind: pipeline
+type: docker
 name: default
 
 steps:
 - name: test
-  image: golang
+  image: golang:1.12
   commands:
   - go lint
