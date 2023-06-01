@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_gosample_1685650008435-pr-trigger-input-set
+  identifier: Build_gosample_1685650008435prtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: k8sTest
+  pipeline:
+    identifier: Build_gosample_1685650008435
+    properties:
+      ci:
+        codebase:
+          build:
+            type: PR
+            spec:
+              number: <+trigger.prNumber>
