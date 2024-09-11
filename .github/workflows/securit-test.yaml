@@ -16,9 +16,9 @@ name: Checkmarx Scan
 # Controls when the workflow will run
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 permissions:
   contents: read
@@ -47,31 +47,33 @@ jobs:
         run: docker images
       - name: Run Docker image
         run: docker run checkmarx/ast-cli version
-      - name: Run SAST and KICS Scan
+      - name: Run SAST and KICS Scan1
         env:
           CX_TENANT: ${{ secrets.CX_TENANT }}
           CX_API_KEY: ${{ secrets.CX_API_KEY }}
+          CX_CLIENT_ID: ${{ secrets.CX_CLIENT_ID }}
+          CX_CLIENT_SECRET: ${{ secrets.CX_CLIENT_SECRET }}
         run: |
           tempreponame="appsectest1-"
           tempreponame+=${GITHUB_REPOSITORY##*/}
           echo $tempreponame
-          docker run checkmarx/ast-cli project list --filter "names=$tempreponame" --tenant ${{ env.CX_TENANT }} --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }} --apikey ${{ env.CX_API_KEY }} >> project_list.json
+          docker run checkmarx/ast-cli project list --filter "names=$tempreponame" --tenant ${{ env.CX_TENANT }} --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }} --client-id ${{ env.CX_CLIENT_ID }} --client-secret ${{ env.CX_CLIENT_SECRET}} >> project_list.json
           fiSi=$(wc -c project_list.json | awk '{print $1}')
           echo "FileSize: $fiSi"
           if [[ $fiSi -lt 20 ]]
             then
               echo "Creating new project in Checkmarx"
-              docker run checkmarx/ast-cli project create --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }}  --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --tags sto:test,env:dev --groups TestGroup --project-name $tempreponame --application-name Security-Sandbox
+              docker run checkmarx/ast-cli project create --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }}  --tenant ${{ env.CX_TENANT }} --client-id ${{ env.CX_CLIENT_ID }} --client-secret ${{ env.CX_CLIENT_SECRET}} --tags sto:test,env:dev --groups TestGroup --project-name $tempreponame --application-name Security-Sandbox
           fi
           # Run Scan
           echo "Running Scan"
           pwd
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sast --sast-incremental --project-groups TestGroup --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW'
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --client-id ${{ env.CX_CLIENT_ID }} --client-secret ${{ env.CX_CLIENT_SECRET}} --report-format json --output-path /tmp/ --tags env:dev --scan-types sast --sast-incremental --project-groups TestGroup --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW'
           ls -al /tmp
           cat /tmp/cx_result.json | jq
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types kics --project-groups TestGroup  --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW' --output-name cx_result_kics
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --client-id ${{ env.CX_CLIENT_ID }} --client-secret ${{ env.CX_CLIENT_SECRET}} --report-format json --output-path /tmp/ --tags env:dev --scan-types kics --project-groups TestGroup  --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW' --output-name cx_result_kics
           ls -al /tmp
           cat /tmp/cx_result_kics.json | jq
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sca --project-groups TestGroup  --filter 'status=FIXED,status=NEW' --output-name cx_result_sca --sca-filter vendor
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --client-id ${{ env.CX_CLIENT_ID }} --client-secret ${{ env.CX_CLIENT_SECRET}} --report-format json --output-path /tmp/ --tags env:dev --scan-types sca --project-groups TestGroup  --filter 'status=FIXED,status=NEW' --output-name cx_result_sca --sca-filter vendor
           ls -al /tmp
           cat /tmp/cx_result_sca.json | jq
