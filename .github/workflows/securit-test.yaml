@@ -52,7 +52,7 @@ jobs:
           CX_TENANT: ${{ secrets.CX_TENANT }}
           CX_API_KEY: ${{ secrets.CX_API_KEY }}
         run: |
-          tempreponame="appsectest-"
+          tempreponame="appsectest1-"
           tempreponame+=${GITHUB_REPOSITORY##*/}
           echo $tempreponame
           docker run checkmarx/ast-cli project list --filter "names=$tempreponame" --tenant ${{ env.CX_TENANT }} --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }} --apikey ${{ env.CX_API_KEY }} >> project_list.json
@@ -61,17 +61,17 @@ jobs:
           if [[ $fiSi -lt 20 ]]
             then
               echo "Creating new project in Checkmarx"
-              docker run checkmarx/ast-cli project create --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }}  --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --tags sto:test,env:dev,company:adoreme --groups AdoreMe_Group --project-name $tempreponame --application-name ADOREME
+              docker run checkmarx/ast-cli project create --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }}  --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --tags sto:test,env:dev --groups TestGroup --project-name $tempreponame --application-name Security-Sandbox
           fi
           # Run Scan
           echo "Running Scan"
           pwd
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sast --sast-incremental --project-groups AdoreMe_Group --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW'
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sast --sast-incremental --project-groups TestGroup --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW'
           ls -al /tmp
           cat /tmp/cx_result.json | jq
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types kics --project-groups AdoreMe_Group  --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW' --output-name cx_result_kics
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types kics --project-groups TestGroup  --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW' --output-name cx_result_kics
           ls -al /tmp
           cat /tmp/cx_result_kics.json | jq
-          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sca --project-groups AdoreMe_Group  --filter 'status=FIXED,status=NEW' --output-name cx_result_sca --sca-filter vendor
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sca --project-groups TestGroup  --filter 'status=FIXED,status=NEW' --output-name cx_result_sca --sca-filter vendor
           ls -al /tmp
           cat /tmp/cx_result_sca.json | jq
