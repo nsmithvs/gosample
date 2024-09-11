@@ -16,9 +16,9 @@ name: Checkmarx Scan
 # Controls when the workflow will run
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
         run: docker images
       - name: Run Docker image
         run: docker run checkmarx/ast-cli version
-      - name: Run SAST and KICS Scan
+      - name: Run SAST and KICS Scan1
         env:
           CX_TENANT: ${{ secrets.CX_TENANT }}
           CX_API_KEY: ${{ secrets.CX_API_KEY }}
