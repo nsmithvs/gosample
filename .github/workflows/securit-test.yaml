@@ -1,0 +1,77 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+# The Checkmarx One GitHub Action enables you to trigger SAST, SCA, and KICS scans directly from the GitHub workflow.
+# It provides a wrapper around the Checkmarx One CLI Tool which creates a zip archive from your source code repository
+# and uploads it to Checkmarx One for scanning. The Github Action provides easy integration with GitHub while enabling
+# scan customization using the full functionality and flexibility of the CLI tool.
+
+# This is a basic workflow to help you get started with Using Checkmarx One Action,
+# documentation can be found here : https://checkmarx.com/resource/documents/en/34965-68702-checkmarx-one-github-actions.html
+
+name: Checkmarx Scan
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+    environment: Dev
+    # Steps represent a sequence of tasks that will be executed as part of the job.
+    steps:
+      # This step checks out a copy of your repository.
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      # This step creates the Checkmarx One scan
+      - name: Check values
+        run: ls -al
+      - name: Check Docker
+        run: docker version
+      - name: Pull Image
+        run: docker pull checkmarx/ast-cli
+      - name: Checkout docker
+        run: docker images
+      - name: Run Docker image
+        run: docker run checkmarx/ast-cli version
+      - name: Run SAST and KICS Scan
+        env:
+          CX_TENANT: ${{ secrets.CX_TENANT }}
+          CX_API_KEY: ${{ secrets.CX_API_KEY }}
+        run: |
+          tempreponame="appsectest1-"
+          tempreponame+=${GITHUB_REPOSITORY##*/}
+          echo $tempreponame
+          docker run checkmarx/ast-cli project list --filter "names=$tempreponame" --tenant ${{ env.CX_TENANT }} --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }} --apikey ${{ env.CX_API_KEY }} >> project_list.json
+          fiSi=$(wc -c project_list.json | awk '{print $1}')
+          echo "FileSize: $fiSi"
+          if [[ $fiSi -lt 20 ]]
+            then
+              echo "Creating new project in Checkmarx"
+              docker run checkmarx/ast-cli project create --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri ${{ vars.CX_BASE_AUTH_URI }}  --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --tags sto:test,env:dev --groups TestGroup --project-name $tempreponame --application-name Security-Sandbox
+          fi
+          # Run Scan
+          echo "Running Scan"
+          pwd
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sast --sast-incremental --project-groups TestGroup --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW'
+          ls -al /tmp
+          cat /tmp/cx_result.json | jq
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types kics --project-groups TestGroup  --sast-preset-name 'ASA Premium' --filter 'status=FIXED,status=NEW' --output-name cx_result_kics
+          ls -al /tmp
+          cat /tmp/cx_result_kics.json | jq
+          docker run -v $(pwd):/home/cx/ -v /tmp/:/tmp/ checkmarx/ast-cli scan create -s /home/cx/ --branch main --project-name "$tempreponame" --base-uri ${{ vars.CX_BASE_URI }} --base-auth-uri  ${{ vars.CX_BASE_AUTH_URI }} --tenant ${{ env.CX_TENANT }} --apikey ${{ env.CX_API_KEY }} --report-format json --output-path /tmp/ --tags env:dev --scan-types sca --project-groups TestGroup  --filter 'status=FIXED,status=NEW' --output-name cx_result_sca --sca-filter vendor
+          ls -al /tmp
+          cat /tmp/cx_result_sca.json | jq
